@@ -1,14 +1,18 @@
 import { Request, Response } from 'express';
-import {
-  getBalanceUseCase,
-  getTransactionHistoryUseCase,
-  createPaymentUseCase, 
-} from '../dependencies/dependencies';
+import { GetBalanceUseCase } from '../../../application/use-cases/GetBalanceUseCase';
+import { GetTransactionHistoryUseCase } from '../../../application/use-cases/GetTransactionHistoryUseCase';
+import { CreatePaymentUseCase } from '../../../application/use-cases/CreatePaymentUseCase';
 
-class PaymentController {
-  async getBalance(req: Request, res: Response) {
+export class PaymentController {
+  constructor(
+    private readonly getBalanceUseCase: GetBalanceUseCase,
+    private readonly getTransactionHistoryUseCase: GetTransactionHistoryUseCase,
+    private readonly createPaymentUseCase: CreatePaymentUseCase
+  ) {}
+
+  getBalance = async (req: Request, res: Response) => {
     try {
-      const balance = await getBalanceUseCase.execute();
+      const balance = await this.getBalanceUseCase.execute();
       res.status(200).json({ success: true, data: balance });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -18,9 +22,9 @@ class PaymentController {
         error: errorMessage,
       });
     }
-  }
+  };
 
-  async getTransactionHistory(req: Request, res: Response) {
+  getTransactionHistory = async (req: Request, res: Response) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
       const starting_after = req.query.starting_after as string | undefined;
@@ -29,7 +33,7 @@ class PaymentController {
         options.starting_after = starting_after;
       }
 
-      const transactions = await getTransactionHistoryUseCase.execute(options);
+      const transactions = await this.getTransactionHistoryUseCase.execute(options);
       res.status(200).json({ success: true, data: transactions });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -39,12 +43,11 @@ class PaymentController {
         error: errorMessage,
       });
     }
-  }
+  };
 
-  async createPayment(req: Request, res: Response) {
+  createPayment = async (req: Request, res: Response) => {
     try {
       const { amount, currency, description, userName } = req.body;
-
       const user = req.user;
 
       if (!user) {
@@ -53,17 +56,18 @@ class PaymentController {
           message: 'No se pudo identificar al usuario. Revisa tu token.' 
         });
       }
+
       const nameToUse = userName || 'Voluntario (Sin nombre)';
 
-      const result = await createPaymentUseCase.execute({
-        amount: Number(amount),     
+      const result = await this.createPaymentUseCase.execute({
+        amount: Number(amount),
         currency: currency || 'mxn',
-        userId: user.userId.toString(), 
-        userEmail: user.email,         
-        userName: nameToUse, 
+        userId: user.userId.toString(),
+        userEmail: user.email,
+        userName: nameToUse,
         description: description,
         successUrl: 'https://google.com?status=success',
-        cancelUrl: 'https://google.com?status=cancel'    
+        cancelUrl: 'https://google.com?status=cancel'
       });
 
       res.status(201).json({ success: true, data: result });
@@ -76,7 +80,5 @@ class PaymentController {
         error: errorMessage,
       });
     }
-  }
+  };
 }
-
-export default new PaymentController();

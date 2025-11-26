@@ -1,47 +1,38 @@
 import { stripe } from '../config/stripe';
-import {
-  Balance,
-  IPaymentRepository,
-  Transaction,
-  CreatePaymentDTO
-} from '../../domain/repositories/IPaymentRepository';
+import { IPaymentRepository, CreatePaymentDTO } from '../../domain/repositories/IPaymentRepository';
+import { AccountBalance } from '../../domain/entities/AccountBalance';
+import { PaymentTransaction } from '../../domain/entities/PaymentTransaction';
 import Stripe from 'stripe';
 
-
 export class StripePaymentRepository implements IPaymentRepository {
-  private _toDomainBalance(stripeBalance: Stripe.Balance): Balance {
+  
+  private _toDomainBalance(stripeBalance: Stripe.Balance): AccountBalance {
     const availableAmount = stripeBalance.available[0]
       ? stripeBalance.available[0].amount / 100
       : 0;
     const pendingAmount = stripeBalance.pending[0]
       ? stripeBalance.pending[0].amount / 100
       : 0;
+    const currency = stripeBalance.available[0]
+      ? stripeBalance.available[0].currency
+      : 'mxn';
 
-    return {
-      available: availableAmount,
-      pending: pendingAmount,
-      currency: stripeBalance.available[0]
-        ? stripeBalance.available[0].currency
-        : 'mxn',
-    };
+    return new AccountBalance(availableAmount, pendingAmount, currency);
   }
 
-  private _toDomainTransaction(
-    tx: Stripe.BalanceTransaction
-  ): Transaction {
-
-    return {
-      id: tx.id,
-      amount: tx.amount / 100, 
-      currency: tx.currency,
-      description: tx.description,
-      type: tx.type,
-      status: tx.status,
-      created: new Date(tx.created * 1000), 
-    };
+  private _toDomainTransaction(tx: Stripe.BalanceTransaction): PaymentTransaction {
+    return new PaymentTransaction(
+      tx.id,
+      tx.amount / 100,
+      tx.currency,
+      tx.description,
+      tx.type,
+      tx.status,
+      new Date(tx.created * 1000)
+    );
   }
 
-  async getBalance(): Promise<Balance> {
+  async getBalance(): Promise<AccountBalance> {
     try {
       const stripeBalance = await stripe.balance.retrieve();
       return this._toDomainBalance(stripeBalance);
@@ -54,7 +45,7 @@ export class StripePaymentRepository implements IPaymentRepository {
   async getTransactionHistory(options: {
     limit: number;
     starting_after?: string;
-  }): Promise<Transaction[]> {
+  }): Promise<PaymentTransaction[]> {
     try {
       const params: Stripe.BalanceTransactionListParams = {
         limit: options.limit,
@@ -63,7 +54,9 @@ export class StripePaymentRepository implements IPaymentRepository {
         params.starting_after = options.starting_after;
       }
       const transactions = await stripe.balanceTransactions.list(params);
-      return transactions.data.map(this._toDomainTransaction);
+      
+      // Mapeamos cada resultado a una instancia de nuestra Entidad
+      return transactions.data.map((tx) => this._toDomainTransaction(tx));
 
     } catch (error) {
       console.error('Error en Stripe getTransactionHistory:', error);
@@ -77,7 +70,6 @@ export class StripePaymentRepository implements IPaymentRepository {
         payment_method_types: ['card'],
         mode: 'payment',
         customer_email: data.userEmail,
-
         line_items: [
           {
             price_data: {
@@ -86,22 +78,19 @@ export class StripePaymentRepository implements IPaymentRepository {
                 name: 'Donación Voluntaria',
                 description: data.description || 'Gracias por tu apoyo',
               },
-              unit_amount: Math.round(data.amount * 100), 
+              unit_amount: Math.round(data.amount * 100),
             },
             quantity: 1,
           },
         ],
-
-
         payment_intent_data: {
-          description: `Donación de ${data.userName}`, 
+          description: `Donación de ${data.userName}`,
           metadata: {
             userId: data.userId,
             userName: data.userName,
             userEmail: data.userEmail
           }
         },
-
         success_url: data.successUrl,
         cancel_url: data.cancelUrl,
       });
