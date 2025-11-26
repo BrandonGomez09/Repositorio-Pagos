@@ -17,4 +17,4 @@ export const stripe = new Stripe(stripeSecretKey, {
   typescript: true,
 });
 
-console.log('✅ Cliente de Stripe inicializado (en modo simulación).');
+console.log('Cliente de Stripe inicializado.');
