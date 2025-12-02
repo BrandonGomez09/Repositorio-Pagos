@@ -1,0 +1,15 @@
+services:
+  payments-service:
+    container_name: payments-service
+    build: .
+    restart: always
+    ports:
+      - "${PORT}:3005"
+    env_file:
+      - .env
+    networks:
+      - shared-network
+
+networks:
+  shared-network:
+    driver: bridge
