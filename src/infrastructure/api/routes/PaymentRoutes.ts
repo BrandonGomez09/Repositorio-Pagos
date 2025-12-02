@@ -5,7 +5,7 @@ import { requireRole } from '../../../middleware/require-role';
 
 const router = Router();
 
-const ROLE_ADMIN_COCINA = 'admin de cocina';
+const ROLE_ADMIN_COCINA = 'Admin_cocina';
 const ROLE_VOLUNTARIO = 'Voluntario'; 
 
 
@@ -22,7 +22,7 @@ router.get(
 );
 
 router.post(
-  '/create-intent',
+  '/:kitchenId/create-intent',
   requireRole(ROLE_VOLUNTARIO),
   paymentController.createPayment
 );

@@ -5,8 +5,14 @@ export interface CreatePaymentDTO {
   amount: number;
   currency: string;
   userId: string;
-  userEmail: string;
+  donorNames: string;
+  donorFirstLastName: string;
+  donorSecondLastName: string;
+  donorEmail: string;
+  donorPhone: string;
+  userEmail: string; 
   userName: string;
+
   kitchenId: string;
   description?: string;
   successUrl: string;
@@ -14,7 +20,6 @@ export interface CreatePaymentDTO {
 }
 
 export interface IPaymentRepository {
-
   getBalance(kitchenId?: string): Promise<AccountBalance>;
 
   getTransactionHistory(options: {

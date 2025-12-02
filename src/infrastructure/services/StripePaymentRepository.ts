@@ -32,11 +32,7 @@ export class StripePaymentRepository implements IPaymentRepository {
 
       const totalCentavos = misPagos.reduce((suma, pi) => suma + pi.amount, 0);
 
-      return new AccountBalance(
-        totalCentavos / 100, 
-        0,                  
-        'mxn'
-      );
+      return new AccountBalance(totalCentavos / 100, 0, 'mxn');
 
     } catch (error) {
       console.error('Error en Stripe getBalance:', error);
@@ -50,15 +46,13 @@ export class StripePaymentRepository implements IPaymentRepository {
     kitchenId?: string;
   }): Promise<PaymentTransaction[]> {
     try {
-      const params: Stripe.PaymentIntentListParams = {
-        limit: 100, 
-      };
+      const params: Stripe.PaymentIntentListParams = { limit: 100 };
 
       if (options.starting_after) {
         params.starting_after = options.starting_after;
       }
-      const paymentIntents = await stripe.paymentIntents.list(params);
 
+      const paymentIntents = await stripe.paymentIntents.list(params);
       let filteredData = paymentIntents.data;
       
       if (options.kitchenId) {
@@ -74,7 +68,12 @@ export class StripePaymentRepository implements IPaymentRepository {
         pi.description,
         'charge',
         pi.status,
-        new Date(pi.created * 1000)
+        new Date(pi.created * 1000),
+        pi.metadata?.donorNames || null,
+        pi.metadata?.donorFirstLastName || null,
+        pi.metadata?.donorSecondLastName || null,
+        pi.metadata?.donorEmail || null,
+        pi.metadata?.donorPhone || null
       ));
 
     } catch (error) {
@@ -88,7 +87,7 @@ export class StripePaymentRepository implements IPaymentRepository {
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         mode: 'payment',
-        customer_email: data.userEmail,
+        customer_email: data.donorEmail, 
         line_items: [
           {
             price_data: {
@@ -103,23 +102,23 @@ export class StripePaymentRepository implements IPaymentRepository {
           },
         ],
         payment_intent_data: {
-          description: `Donación de ${data.userName}`,
+          description: `Donación de ${data.donorNames} ${data.donorFirstLastName}`,
           metadata: {
             userId: data.userId,
-            userName: data.userName,
-            userEmail: data.userEmail,
             kitchenId: data.kitchenId,
-            tipo: "Donación"
+            tipo: "Donación",
+            donorNames: data.donorNames,
+            donorFirstLastName: data.donorFirstLastName,
+            donorSecondLastName: data.donorSecondLastName,
+            donorEmail: data.donorEmail,
+            donorPhone: data.donorPhone
           }
         },
         success_url: data.successUrl,
         cancel_url: data.cancelUrl,
       });
 
-      if (!session.url) {
-        throw new Error('Stripe no devolvió la URL de la sesión');
-      }
-
+      if (!session.url) throw new Error('Stripe no devolvió la URL');
       return { url: session.url };
 
     } catch (error) {
