@@ -6,6 +6,11 @@ export class PaymentTransaction {
     public readonly description: string | null,
     public readonly type: string,
     public readonly status: string,
-    public readonly created: Date
+    public readonly created: Date,
+    public readonly donorNames: string | null,
+    public readonly donorFirstLastName: string | null,
+    public readonly donorSecondLastName: string | null,
+    public readonly donorEmail: string | null,
+    public readonly donorPhone: string | null
   ) {}
 }
