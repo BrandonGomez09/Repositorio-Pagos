@@ -3,8 +3,8 @@ import dotenv from 'dotenv';
 dotenv.config(); 
 
 import app from './app';
+import { KitchenRegisteredConsumer } from './infrastructure/events/KitchenRegisteredConsumer'; 
 import { KitchenRegisteredConsumer } from './infrastructure/events/KitchenRegisteredConsumer';
-// Importamos la conexión a la BD
 import { AppDataSource } from './infrastructure/database/config/data-source';
 
 const PORT = process.env.PORT || 3005;
@@ -22,10 +22,12 @@ async function startServer() {
       process.exit(1); // Si falla la BD, detenemos todo
     }
     
-    // 2. Iniciar RabbitMQ
+    const consumer = new KitchenRegisteredConsumer(); 
+    await consumer.start();                           
+
     const consumer = new KitchenRegisteredConsumer();
     await consumer.start();
-
+    
     app.listen(PORT, () => {
       console.log(`🌐 Servidor corriendo en el puerto ${PORT}`);
     });
